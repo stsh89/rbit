@@ -140,7 +140,13 @@ fn hash_info(info: &[u8]) -> std::string::String {
     hasher.input(&info);
     let mut out = [0u8; 20];
     hasher.result(&mut out);
-    percent_encoding::percent_encode(&out, percent_encoding::DEFAULT_ENCODE_SET).to_string()
+    let mut res = String::new();
+
+    for byte in &out {
+        res.push_str(percent_encoding::percent_encode_byte(*byte));
+    }
+
+    res
 }
 
 fn get_announce_url(data: &bencoder::DataType) -> std::string::String {

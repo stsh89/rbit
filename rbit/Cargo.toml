@@ -7,5 +7,5 @@ edition = "2018"
 [dependencies]
 bencoder = { path = "../bencoder" }
 requester = { path = "../requester" }
-percent-encoding = "^1.0.1"
-rust-crypto = "^0.2"
+percent-encoding = "*"
+rust-crypto = "*"
