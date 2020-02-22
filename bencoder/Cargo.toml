@@ -1,0 +1,7 @@
+[package]
+name = "bencoder"
+version = "1.0.0"
+authors = ["stsh"]
+edition = "2018"
+
+[dependencies]
