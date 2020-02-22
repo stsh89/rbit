@@ -1,0 +1,8 @@
+[package]
+name = "requester"
+version = "1.0.0"
+authors = ["stsh"]
+edition = "2018"
+
+[dependencies]
+reqwest = "^0.9.18"
