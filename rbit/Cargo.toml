@@ -1,0 +1,10 @@
+[package]
+name = "rbit"
+version = "0.0.1"
+authors = ["stsh"]
+edition = "2018"
+
+[dependencies]
+bencoder = { path = "../bencoder" }
+percent-encoding = "^1.0.1"
+rust-crypto = "^0.2"
