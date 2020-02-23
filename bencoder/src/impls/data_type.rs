@@ -7,6 +7,36 @@ pub enum DataType {
     Dictionary(std::collections::HashMap<Vec<u8>, DataType>),
 }
 
+impl DataType {
+    pub fn get_dict_value(&self, key: &[u8]) -> std::option::Option<&DataType> {
+        match self {
+            DataType::Dictionary(dict) => dict.get(key),
+            _ => None,
+        }
+    }
+
+    pub fn get_string_value(&self) -> std::option::Option<&Vec<u8>> {
+        match self {
+            DataType::ByteString(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn get_list_value(&self) -> std::option::Option<&Vec<DataType>> {
+        match self {
+            DataType::List(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn get_integer_value(&self) -> std::option::Option<&i64> {
+        match self {
+            DataType::Integer(value) => Some(value),
+            _ => None,
+        }
+    }
+}
+
 impl fmt::Display for DataType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -30,6 +60,17 @@ impl fmt::Display for DataType {
 
                 write!(f, "}}")
             }
+        }
+    }
+}
+
+impl Clone for DataType {
+    fn clone(&self) -> DataType {
+        match self {
+            DataType::Integer(value) => DataType::Integer(*value),
+            DataType::ByteString(value) => DataType::ByteString(value.clone()),
+            DataType::List(value) => DataType::List(value.clone()),
+            DataType::Dictionary(value) => DataType::Dictionary(value.clone()),
         }
     }
 }

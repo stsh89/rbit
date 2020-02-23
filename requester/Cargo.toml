@@ -1,0 +1,10 @@
+[package]
+name = "requester"
+version = "1.0.0"
+authors = ["stsh"]
+edition = "2018"
+
+[dependencies]
+# Rutracker stoped to return proper answer with reqwest::blocking.
+# Maybe try to update it later
+reqwest = "0.9.24"
