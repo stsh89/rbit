@@ -1,11 +1,11 @@
 pub struct Msg {
     prefix: [u8; 4],
     id: Option<u8>,
-    payload: Option<Payload>
+    payload: Option<Payload>,
 }
 
 pub struct Payload {
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl Msg {
@@ -26,10 +26,10 @@ impl Msg {
     }
 
     pub fn intrested() -> Msg {
-        Msg{
+        Msg {
             prefix: [0, 0, 0, 0],
             id: Some(2),
-            payload: None
+            payload: None,
         }
     }
 }

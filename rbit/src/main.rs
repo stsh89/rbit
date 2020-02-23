@@ -98,10 +98,7 @@ fn convert_string_to_list(value: &[u8]) -> Vec<bencoder::DataType> {
             b"ip".to_vec(),
             bencoder::DataType::ByteString(ip.as_bytes().to_vec()),
         );
-        peer_info.insert(
-            b"port".to_vec(),
-            bencoder::DataType::Integer(port as i64),
-        );
+        peer_info.insert(b"port".to_vec(), bencoder::DataType::Integer(port as i64));
 
         ips.push(bencoder::DataType::Dictionary(peer_info));
     }
@@ -154,7 +151,7 @@ fn hand_shake(stream: &mut TcpStream, hash: &[u8]) {
 
     bytes.push(0b0001_0011);
     bytes.extend(b"BitTorrent protocol");
-    bytes.extend(&[0,0,0,0,0,0,0,0]);
+    bytes.extend(&[0, 0, 0, 0, 0, 0, 0, 0]);
     bytes.extend(hash);
     bytes.extend(b"Rbit-Sn5J5VGM5CkFccE");
 
@@ -190,10 +187,7 @@ fn read_bytes(stream: &mut TcpStream, number_of_bytes: usize) -> Vec<u8> {
 fn send_intrested(stream: &mut TcpStream) {
     println!("Send intrested");
 
-    send_bytes(
-        stream,
-        &peer_wire_protocol::Msg::intrested().pack()
-    );
+    send_bytes(stream, &peer_wire_protocol::Msg::intrested().pack());
 }
 
 fn send_bytes(stream: &mut TcpStream, data: &[u8]) {
