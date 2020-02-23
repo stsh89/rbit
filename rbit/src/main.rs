@@ -9,19 +9,20 @@ use requester;
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use std::io::prelude::*;
-use std::net::SocketAddr;
+use std::net::{SocketAddr, TcpStream};
 
 fn main() {
     let res = bencoder::decode(&file_reader::read_file("./test_data/sample.torrent")[..]);
 
     let info = get_info(&res);
     let hash = hash_info(&info);
-    println!("Percent encoded info key: {:}", hash);
+    let percent_encoded_hash = percent_encode(&hash[..]);
+    println!("Percent encoded info key: {:}", percent_encoded_hash);
 
     let announce_url = get_announce_url(&res);
     println!("Announce url: {}", announce_url);
 
-    let mut response = requester::get(&announce_url, &hash);
+    let mut response = requester::get(&announce_url, &percent_encoded_hash);
     let mut response_content = Vec::new();
     response.read_to_end(&mut response_content).expect("HORROR");
     let bencoded_response = bencoder::decode(&response_content[..]);
@@ -30,23 +31,29 @@ fn main() {
     let ip_addresses = collect_peers_info(&peers);
 
     println!("List of peers:");
-    for addr in ip_addresses {
+    for addr in &ip_addresses {
         println!("{}", addr);
     }
+
+    download_file(&ip_addresses, &hash);
 }
 
 fn get_info(data: &bencoder::DataType) -> std::vec::Vec<u8> {
     bencoder::encode(data.get_dict_value(&b"info".to_vec()).unwrap())
 }
 
-fn hash_info(info: &[u8]) -> std::string::String {
+fn hash_info(info: &[u8]) -> [u8; 20] {
     let mut hasher = Sha1::new();
     hasher.input(&info);
     let mut out = [0u8; 20];
     hasher.result(&mut out);
+    out
+}
+
+fn percent_encode(data: &[u8]) -> String {
     let mut res = String::new();
 
-    for byte in &out {
+    for byte in data {
         res.push_str(percent_encoding::percent_encode_byte(*byte));
     }
 
@@ -124,4 +131,50 @@ fn collect_peers_info(peers: &[bencoder::DataType]) -> Vec<SocketAddr> {
     }
 
     addresses
+}
+
+fn download_file(ip_addresses: &[SocketAddr], hash: &[u8]) {
+    println!("Start file download");
+    let socket = ip_addresses.get(0).unwrap();
+    println!("Start connection to {:?}", socket);
+    let mut stream = TcpStream::connect(socket).unwrap();
+
+    hand_shake(&mut stream, &hash);
+}
+
+fn hand_shake(stream: &mut TcpStream, hash: &[u8]) {
+    let mut bytes: Vec<u8> = Vec::new();
+
+    bytes.push(0b0001_0011);
+    bytes.extend(b"BitTorrent protocol");
+    bytes.extend(&[0,0,0,0,0,0,0,0]);
+    bytes.extend(hash);
+    bytes.extend(b"Rbit-Sn5J5VGM5CkFccE");
+
+    stream.write_all(&bytes).unwrap();
+
+    let length_prefix = read_len_prefix(stream);
+    println!("Length prefix: {}", length_prefix);
+
+    let pstr = String::from_utf8(read_bytes(stream, length_prefix)).unwrap();
+    println!("pstr: {}", pstr);
+
+    let reserved = read_bytes(stream, 8);
+    println!("reserved: {:?}", reserved);
+
+    let info_hash = read_bytes(stream, 20);
+    println!("info hash: {}", info_hash == hash);
+
+    let peer_id = String::from_utf8(read_bytes(stream, 20)).unwrap();
+    println!("peer id: {}", peer_id);
+}
+
+fn read_len_prefix(stream: &mut TcpStream) -> usize {
+    *read_bytes(stream, 1).get(0).unwrap() as usize
+}
+
+fn read_bytes(stream: &mut TcpStream, number_of_bytes: usize) -> Vec<u8> {
+    let mut buf = vec![0u8; number_of_bytes];
+    stream.read_exact(&mut buf).unwrap();
+    buf
 }
