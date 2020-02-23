@@ -1,4 +1,5 @@
 mod file_reader;
+mod peer_wire_protocol;
 
 extern crate crypto;
 extern crate percent_encoding;
@@ -35,7 +36,7 @@ fn main() {
         println!("{}", addr);
     }
 
-    download_file(&ip_addresses, &hash);
+    download_file(&ip_addresses, &hash, &res);
 }
 
 fn get_info(data: &bencoder::DataType) -> std::vec::Vec<u8> {
@@ -133,13 +134,19 @@ fn collect_peers_info(peers: &[bencoder::DataType]) -> Vec<SocketAddr> {
     addresses
 }
 
-fn download_file(ip_addresses: &[SocketAddr], hash: &[u8]) {
+fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder::DataType) {
     println!("Start file download");
     let socket = ip_addresses.get(0).unwrap();
     println!("Start connection to {:?}", socket);
     let mut stream = TcpStream::connect(socket).unwrap();
 
+    println!("Start hand shake");
     hand_shake(&mut stream, &hash);
+    println!("End hand shake");
+
+    send_intrested(&mut stream);
+    read_reply(&mut stream);
+    read_reply(&mut stream);
 }
 
 fn hand_shake(stream: &mut TcpStream, hash: &[u8]) {
@@ -165,7 +172,8 @@ fn hand_shake(stream: &mut TcpStream, hash: &[u8]) {
     let info_hash = read_bytes(stream, 20);
     println!("info hash: {}", info_hash == hash);
 
-    let peer_id = String::from_utf8(read_bytes(stream, 20)).unwrap();
+    let buf = read_bytes(stream, 20);
+    let peer_id = String::from_utf8_lossy(&buf[..]);
     println!("peer id: {}", peer_id);
 }
 
@@ -177,4 +185,40 @@ fn read_bytes(stream: &mut TcpStream, number_of_bytes: usize) -> Vec<u8> {
     let mut buf = vec![0u8; number_of_bytes];
     stream.read_exact(&mut buf).unwrap();
     buf
+}
+
+fn send_intrested(stream: &mut TcpStream) {
+    println!("Send intrested");
+
+    send_bytes(
+        stream,
+        &peer_wire_protocol::Msg::intrested().pack()
+    );
+}
+
+fn send_bytes(stream: &mut TcpStream, data: &[u8]) {
+    stream.write_all(data).unwrap();
+}
+
+fn read_reply(stream: &mut TcpStream) {
+    let reply = read_bytes(stream, 4);
+    let prefix = i32::from_be_bytes([reply[0], reply[1], reply[2], reply[3]]);
+    println!("prefix: {:?}", prefix);
+
+    if prefix != 0 {
+        let id = *read_bytes(stream, 1).get(0).unwrap() as u8;
+        println!("Got id: {}", id);
+
+        if id == 5 {
+            let bitfield_len = (prefix - 1) as usize;
+            let bitfield = read_bytes(stream, bitfield_len);
+            println!("bitfield: {:?}", bitfield);
+        }
+
+        if id == 1 {
+            println!("Unchoked!!1");
+        }
+    } else {
+        println!("Keep alive?");
+    }
 }
