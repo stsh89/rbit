@@ -36,7 +36,7 @@ fn main() {
         println!("{}", addr);
     }
 
-    download_file(&ip_addresses, &hash, &res);
+    download_file(&ip_addresses, &hash, &res.get_dict_value(b"info").unwrap());
 }
 
 fn get_info(data: &bencoder::DataType) -> std::vec::Vec<u8> {
@@ -142,8 +142,60 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
     println!("End hand shake");
 
     send_intrested(&mut stream);
-    read_reply(&mut stream);
-    read_reply(&mut stream);
+    let mut i = 0;
+
+    loop {
+        println!("Start read reply");
+
+        match read_reply(&mut stream) {
+            Some(1) => {
+                println!("Start block request");
+
+                println!("Read piece length");
+                let piece_length = meta_info
+                    .get_dict_value(b"piece length")
+                    .unwrap()
+                    .get_integer_value()
+                    .unwrap();
+
+                println!("Read pieces");
+                let pieces = meta_info
+                    .get_dict_value(b"pieces")
+                    .unwrap()
+                    .get_string_value()
+                    .unwrap();
+
+                println!("Read name");
+                let name = meta_info.get_dict_value(b"name").unwrap();
+
+                println!("Read length");
+                let length = meta_info
+                    .get_dict_value(b"length")
+                    .unwrap()
+                    .get_integer_value()
+                    .unwrap();
+
+                println!("Info piece length: {}", piece_length);
+                println!("Info pieces: {:?}", pieces);
+                println!("Info name: {}", name);
+                println!("Info length: {}", length);
+
+                send_request(&mut stream, 12, 123, 16384)
+            }
+            Some(5) => println!("Thanks for bitfield"),
+            Some(7) => println!("Thanks for piece"),
+            Some(value) => println!("Received unprocessible id: {}", value),
+            None => println!("Thanks for alive"),
+        }
+
+        i += 1;
+
+        if i == 10 {
+            break;
+        } else {
+            println!("Interation {}", i);
+        }
+    }
 }
 
 fn hand_shake(stream: &mut TcpStream, hash: &[u8]) {
@@ -186,15 +238,22 @@ fn read_bytes(stream: &mut TcpStream, number_of_bytes: usize) -> Vec<u8> {
 
 fn send_intrested(stream: &mut TcpStream) {
     println!("Send intrested");
-
     send_bytes(stream, &peer_wire_protocol::Msg::intrested().pack());
+}
+
+fn send_request(stream: &mut TcpStream, index: u32, begin: u32, length: u32) {
+    println!("Send request");
+    send_bytes(
+        stream,
+        &peer_wire_protocol::Msg::request(index, begin, length).pack(),
+    );
 }
 
 fn send_bytes(stream: &mut TcpStream, data: &[u8]) {
     stream.write_all(data).unwrap();
 }
 
-fn read_reply(stream: &mut TcpStream) {
+fn read_reply(stream: &mut TcpStream) -> Option<u8> {
     let reply = read_bytes(stream, 4);
     let prefix = i32::from_be_bytes([reply[0], reply[1], reply[2], reply[3]]);
     println!("prefix: {:?}", prefix);
@@ -212,7 +271,16 @@ fn read_reply(stream: &mut TcpStream) {
         if id == 1 {
             println!("Unchoked!!1");
         }
+
+        if id == 7 {
+            let block_len = (prefix - 9) as usize;
+            let payload = read_bytes(stream, block_len + 2);
+            println!("Piece: {:?}", payload);
+        }
+
+        Some(id)
     } else {
         println!("Keep alive?");
+        None
     }
 }

@@ -25,7 +25,24 @@ impl Msg {
         buf
     }
 
+    pub fn request(index: u32, begin: u32, length: u32) -> Msg {
+        println!("REQUEST MESSAGE");
+        let mut data = Vec::<u8>::new();
+
+        data.extend(&index.to_be_bytes());
+        data.extend(&begin.to_be_bytes());
+        data.extend(&length.to_be_bytes());
+
+        Msg {
+            prefix: [0, 0, 0, 13],
+            id: Some(6),
+            payload: Some(Payload { data }),
+        }
+    }
+
     pub fn intrested() -> Msg {
+        println!("INTRESTED MESSAGE");
+
         Msg {
             prefix: [0, 0, 0, 0],
             id: Some(2),
