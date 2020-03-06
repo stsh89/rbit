@@ -193,7 +193,7 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
         if i == 10 {
             break;
         } else {
-            println!("Interation {}", i);
+            println!("Iteration {}", i);
         }
     }
 }
