@@ -44,7 +44,7 @@ impl Msg {
         println!("INTRESTED MESSAGE");
 
         Msg {
-            prefix: [0, 0, 0, 0],
+            prefix: [0, 0, 0, 1],
             id: Some(2),
             payload: None,
         }
