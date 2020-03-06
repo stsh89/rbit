@@ -180,7 +180,7 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
                 println!("Info name: {}", name);
                 println!("Info length: {}", length);
 
-                send_request(&mut stream, 12, 123, 16384)
+                send_request(&mut stream, 0, 0, 16384)
             }
             Some(5) => println!("Thanks for bitfield"),
             Some(7) => println!("Thanks for piece"),
@@ -274,7 +274,7 @@ fn read_reply(stream: &mut TcpStream) -> Option<u8> {
 
         if id == 7 {
             let block_len = (prefix - 9) as usize;
-            let payload = read_bytes(stream, block_len + 2);
+            let payload = read_bytes(stream, block_len + 8);
             println!("Piece: {:?}", payload);
         }
 
