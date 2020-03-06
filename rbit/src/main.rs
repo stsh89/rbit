@@ -150,37 +150,8 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
         match read_reply(&mut stream) {
             Some(1) => {
                 println!("Start block request");
-
-                println!("Read piece length");
-                let piece_length = meta_info
-                    .get_dict_value(b"piece length")
-                    .unwrap()
-                    .get_integer_value()
-                    .unwrap();
-
-                println!("Read pieces");
-                let pieces = meta_info
-                    .get_dict_value(b"pieces")
-                    .unwrap()
-                    .get_string_value()
-                    .unwrap();
-
-                println!("Read name");
-                let name = meta_info.get_dict_value(b"name").unwrap();
-
-                println!("Read length");
-                let length = meta_info
-                    .get_dict_value(b"length")
-                    .unwrap()
-                    .get_integer_value()
-                    .unwrap();
-
-                println!("Info piece length: {}", piece_length);
-                println!("Info pieces: {:?}", pieces);
-                println!("Info name: {}", name);
-                println!("Info length: {}", length);
-
-                send_request(&mut stream, 0, 0, 16384)
+                let file_info = read_file_info(meta_info);
+                receive_pieces(&mut stream, file_info.piece_length)
             }
             Some(5) => println!("Thanks for bitfield"),
             Some(7) => println!("Thanks for piece"),
@@ -249,6 +220,26 @@ fn send_request(stream: &mut TcpStream, index: u32, begin: u32, length: u32) {
     );
 }
 
+fn receive_pieces(stream: &mut TcpStream, len: u32) {
+    let step: u32 = 16384;
+    let mut res = step;
+    let n: u32 = len / step;
+    let mut from = 0;
+
+    loop {
+        if res > len {
+            println!("from = {}, to = {}, step = {}", from, res, len - from);
+            send_request(stream, 0, res, step);
+            break;
+        } else {
+            println!("from = {}, to = {}, step = {}", from, res, step);
+            send_request(stream, 0, res, step);
+            from = res + 1;
+            res += step + 1;
+        }
+    }
+}
+
 fn send_bytes(stream: &mut TcpStream, data: &[u8]) {
     stream.write_all(data).unwrap();
 }
@@ -283,4 +274,48 @@ fn read_reply(stream: &mut TcpStream) -> Option<u8> {
         println!("Keep alive?");
         None
     }
+}
+
+fn read_file_info(meta_info: &bencoder::DataType) -> peer_wire_protocol::SingleFileInfo {
+    println!("Read piece length");
+    let piece_length = *meta_info
+        .get_dict_value(b"piece length")
+        .unwrap()
+        .get_integer_value()
+        .unwrap() as u32;
+
+    println!("Read pieces");
+    let pieces = meta_info
+        .get_dict_value(b"pieces")
+        .unwrap()
+        .get_string_value()
+        .unwrap();
+
+    println!("Read name");
+    let name = meta_info
+        .get_dict_value(b"name")
+        .unwrap()
+        .get_string_value()
+        .unwrap();
+
+    println!("Read length");
+    let length = *meta_info
+        .get_dict_value(b"length")
+        .unwrap()
+        .get_integer_value()
+        .unwrap() as u32;
+
+    let info = peer_wire_protocol::SingleFileInfo{
+        piece_length: piece_length,
+        pieces: pieces.to_vec(),
+        name: String::from_utf8_lossy(&name[..]).to_string(),
+        length: length
+    };
+
+    println!("Info piece length: {}", info.piece_length);
+    println!("Info pieces: {:?}", info.pieces);
+    println!("Info name: {}", info.name);
+    println!("Info length: {}", info.length);
+
+    info
 }

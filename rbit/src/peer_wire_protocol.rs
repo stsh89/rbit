@@ -8,6 +8,13 @@ pub struct Payload {
     data: Vec<u8>,
 }
 
+pub struct SingleFileInfo {
+    pub piece_length: u32,
+    pub pieces: Vec<u8>,
+    pub name: String,
+    pub length: u32,
+}
+
 impl Msg {
     pub fn pack(&self) -> Vec<u8> {
         let mut buf = Vec::<u8>::new();
