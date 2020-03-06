@@ -141,7 +141,7 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
     hand_shake(&mut stream, &hash);
     println!("End hand shake");
 
-    send_intrested(&mut stream);
+    send_interested(&mut stream);
     let mut i = 0;
 
     loop {
@@ -236,9 +236,9 @@ fn read_bytes(stream: &mut TcpStream, number_of_bytes: usize) -> Vec<u8> {
     buf
 }
 
-fn send_intrested(stream: &mut TcpStream) {
+fn send_interested(stream: &mut TcpStream) {
     println!("Send intrested");
-    send_bytes(stream, &peer_wire_protocol::Msg::intrested().pack());
+    send_bytes(stream, &peer_wire_protocol::Msg::interested().pack());
 }
 
 fn send_request(stream: &mut TcpStream, index: u32, begin: u32, length: u32) {

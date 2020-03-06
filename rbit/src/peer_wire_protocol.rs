@@ -40,7 +40,7 @@ impl Msg {
         }
     }
 
-    pub fn intrested() -> Msg {
+    pub fn interested() -> Msg {
         println!("INTRESTED MESSAGE");
 
         Msg {
