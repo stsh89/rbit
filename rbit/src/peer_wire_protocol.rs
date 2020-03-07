@@ -1,11 +1,11 @@
 pub struct Msg {
-    prefix: [u8; 4],
-    id: Option<u8>,
-    payload: Option<Payload>,
+    pub prefix: [u8; 4],
+    pub id: Option<u8>,
+    pub payload: Option<Payload>,
 }
 
 pub struct Payload {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 pub struct SingleFileInfo {

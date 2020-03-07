@@ -148,15 +148,15 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
         println!("Start read reply");
 
         match read_reply(&mut stream) {
-            Some(1) => {
+            peer_wire_protocol::Msg{prefix: _prefix, id: Some(1), payload: _payload} => {
                 println!("Start block request");
                 let file_info = read_file_info(meta_info);
                 receive_pieces(&mut stream, file_info.piece_length)
             }
-            Some(5) => println!("Thanks for bitfield"),
-            Some(7) => println!("Thanks for piece"),
-            Some(value) => println!("Received unprocessible id: {}", value),
-            None => println!("Thanks for alive"),
+            peer_wire_protocol::Msg{prefix: _prefix, id: Some(5), payload: _payload} => println!("Thanks for bitfield"),
+            peer_wire_protocol::Msg{prefix: _prefix, id: Some(7), payload: _payload} => println!("Thanks for piece"),
+            peer_wire_protocol::Msg{prefix: _prefix, id: Some(value), payload: _payload} => println!("Received unprocessible id: {}", value),
+            peer_wire_protocol::Msg{prefix: _prefix, id: None, payload: _payload} =>println!("Thanks for alive"),
         }
 
         i += 1;
@@ -228,11 +228,11 @@ fn receive_pieces(stream: &mut TcpStream, len: u32) {
     loop {
         if res > len {
             println!("from = {}, to = {}, step = {}", from, res, len - from);
-            send_request(stream, 0, res, step);
+            send_request(stream, 0, from, len - from);
             break;
         } else {
             println!("from = {}, to = {}, step = {}", from, res, step);
-            send_request(stream, 0, res, step);
+            send_request(stream, 0, from, step);
             from = res + 1;
             res += step + 1;
         }
@@ -243,9 +243,11 @@ fn send_bytes(stream: &mut TcpStream, data: &[u8]) {
     stream.write_all(data).unwrap();
 }
 
-fn read_reply(stream: &mut TcpStream) -> Option<u8> {
+fn read_reply(stream: &mut TcpStream) -> peer_wire_protocol::Msg {
     let reply = read_bytes(stream, 4);
-    let prefix = i32::from_be_bytes([reply[0], reply[1], reply[2], reply[3]]);
+    let mut prefix_length = [0u8; 4];
+    prefix_length.copy_from_slice(&reply);
+    let prefix = i32::from_be_bytes(prefix_length);
     println!("prefix: {:?}", prefix);
 
     if prefix != 0 {
@@ -265,13 +267,16 @@ fn read_reply(stream: &mut TcpStream) -> Option<u8> {
         if id == 7 {
             let block_len = (prefix - 9) as usize;
             let payload = read_bytes(stream, block_len + 8);
-            println!("Piece: {:?}", payload);
+            println!("Piece index: {:?}", &payload[0..=3]);
+            println!("Piece offset: {:?}", &payload[4..=7]);
+            // println!("Content: {:?}", &payload[8..=block_len]);
+            return peer_wire_protocol::Msg{prefix: prefix_length, id: Some(id), payload: Some(peer_wire_protocol::Payload{data: payload})};
         }
 
-        Some(id)
+        peer_wire_protocol::Msg{prefix: prefix_length, id: Some(id), payload: None}
     } else {
         println!("Keep alive?");
-        None
+        peer_wire_protocol::Msg{prefix: prefix_length, id: None, payload: None}
     }
 }
 
@@ -311,8 +316,8 @@ fn read_file_info(meta_info: &bencoder::DataType) -> peer_wire_protocol::SingleF
         length: length
     };
 
-    println!("Info piece length: {}", info.piece_length);
     println!("Info pieces: {:?}", info.pieces);
+    println!("Info piece length: {}", info.piece_length);
     println!("Info name: {}", info.name);
     println!("Info length: {}", info.length);
 
