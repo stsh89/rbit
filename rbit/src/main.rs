@@ -223,7 +223,6 @@ fn send_request(stream: &mut TcpStream, index: u32, begin: u32, length: u32) {
 fn receive_pieces(stream: &mut TcpStream, len: u32) {
     let step: u32 = 16384;
     let mut res = step;
-    let n: u32 = len / step;
     let mut from = 0;
 
     loop {
