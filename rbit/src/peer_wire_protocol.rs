@@ -15,6 +15,12 @@ pub struct SingleFileInfo {
     pub length: u32,
 }
 
+pub struct Piece {
+    pub index: u32,
+    pub begin: u32,
+    pub block: Vec<u8>
+}
+
 impl Msg {
     pub fn pack(&self) -> Vec<u8> {
         let mut buf = Vec::<u8>::new();
