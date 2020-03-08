@@ -59,3 +59,47 @@ impl Msg {
         }
     }
 }
+
+pub fn read_file_info(meta_info: &bencoder::DataType) -> SingleFileInfo {
+    let piece_length = *meta_info
+        .get_dict_value(b"piece length")
+        .unwrap()
+        .get_integer_value()
+        .unwrap() as u32;
+
+    let pieces = meta_info
+        .get_dict_value(b"pieces")
+        .unwrap()
+        .get_string_value()
+        .unwrap()
+        .to_vec();
+
+    let name = String::from_utf8_lossy(
+        meta_info
+            .get_dict_value(b"name")
+            .unwrap()
+            .get_string_value()
+            .unwrap(),
+    )
+    .to_string();
+
+    let length = *meta_info
+        .get_dict_value(b"length")
+        .unwrap()
+        .get_integer_value()
+        .unwrap() as u32;
+
+    let info = SingleFileInfo {
+        piece_length,
+        length,
+        pieces,
+        name,
+    };
+
+    println!("Info pieces: {:?}", info.pieces);
+    println!("Info piece length: {}", info.piece_length);
+    println!("Info name: {}", info.name);
+    println!("Info length: {}", info.length);
+
+    info
+}

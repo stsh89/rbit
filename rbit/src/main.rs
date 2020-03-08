@@ -143,7 +143,7 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
     println!("End hand shake");
 
     send_interested(&mut stream);
-    let file_info = read_file_info(meta_info);
+    let file_info = peer_wire_protocol::read_file_info(meta_info);
     let mut i = 0;
     let mut map: HashMap<u32, Vec<peer_wire_protocol::Piece>> = HashMap::new();
     map.insert(0, Vec::new());
@@ -358,48 +358,4 @@ fn read_reply(stream: &mut TcpStream) -> peer_wire_protocol::Msg {
             payload: None,
         }
     }
-}
-
-fn read_file_info(meta_info: &bencoder::DataType) -> peer_wire_protocol::SingleFileInfo {
-    println!("Read piece length");
-    let piece_length = *meta_info
-        .get_dict_value(b"piece length")
-        .unwrap()
-        .get_integer_value()
-        .unwrap() as u32;
-
-    println!("Read pieces");
-    let pieces = meta_info
-        .get_dict_value(b"pieces")
-        .unwrap()
-        .get_string_value()
-        .unwrap();
-
-    println!("Read name");
-    let name = meta_info
-        .get_dict_value(b"name")
-        .unwrap()
-        .get_string_value()
-        .unwrap();
-
-    println!("Read length");
-    let length = *meta_info
-        .get_dict_value(b"length")
-        .unwrap()
-        .get_integer_value()
-        .unwrap() as u32;
-
-    let info = peer_wire_protocol::SingleFileInfo {
-        piece_length,
-        length,
-        pieces: pieces.to_vec(),
-        name: String::from_utf8_lossy(&name[..]).to_string(),
-    };
-
-    println!("Info pieces: {:?}", info.pieces);
-    println!("Info piece length: {}", info.piece_length);
-    println!("Info name: {}", info.name);
-    println!("Info length: {}", info.length);
-
-    info
 }
