@@ -1,11 +1,7 @@
 pub struct Msg {
     pub prefix: [u8; 4],
     pub id: Option<u8>,
-    pub payload: Option<Payload>,
-}
-
-pub struct Payload {
-    pub data: Vec<u8>,
+    pub payload: Option<Vec<u8>>,
 }
 
 pub struct SingleFileInfo {
@@ -18,7 +14,7 @@ pub struct SingleFileInfo {
 pub struct Piece {
     pub index: u32,
     pub begin: u32,
-    pub block: Vec<u8>
+    pub block: Vec<u8>,
 }
 
 impl Msg {
@@ -32,7 +28,7 @@ impl Msg {
         }
 
         if let Some(payload) = &self.payload {
-            buf.extend_from_slice(&payload.data);
+            buf.extend_from_slice(&payload);
         }
 
         buf
@@ -49,7 +45,7 @@ impl Msg {
         Msg {
             prefix: [0, 0, 0, 13],
             id: Some(6),
-            payload: Some(Payload { data }),
+            payload: Some(data),
         }
     }
 

@@ -9,8 +9,8 @@ use requester;
 
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-use std::io::prelude::*;
 use std::collections::HashMap;
+use std::io::prelude::*;
 use std::net::{SocketAddr, TcpStream};
 
 fn main() {
@@ -158,7 +158,7 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
                 payload: _payload,
             } => {
                 println!("Start block request");
-                receive_pieces(&mut stream, file_info.piece_length )
+                receive_pieces(&mut stream, file_info.piece_length)
             }
             peer_wire_protocol::Msg {
                 prefix: _prefix,
@@ -172,38 +172,52 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
             } => {
                 println!("Thanks for piece");
                 // let len: usize = (i32::from_be_bytes(pref) - 9) as usize;
-                let index = i32::from_be_bytes([payload.data[0], payload.data[1], payload.data[2], payload.data[3]]) as u32;
-                let begin = i32::from_be_bytes([payload.data[4], payload.data[5], payload.data[6], payload.data[7]]) as u32;
-                let block = &payload.data[8..];
-                let piece = peer_wire_protocol::Piece{index: index, begin: begin, block: block.to_vec()};
+                let index = i32::from_be_bytes([
+                    payload.data[0],
+                    payload.data[1],
+                    payload.data[2],
+                    payload.data[3],
+                ]) as u32;
+                let begin = i32::from_be_bytes([
+                    payload.data[4],
+                    payload.data[5],
+                    payload.data[6],
+                    payload.data[7],
+                ]) as u32;
+                let block = (&payload.data[8..]).to_vec();
+                let block_len = block.len();
+                let piece = peer_wire_protocol::Piece {
+                    index,
+                    begin,
+                    block,
+                };
 
                 map.get_mut(&0).unwrap().push(piece);
 
                 let total_len = map
                     .get(&0)
                     .unwrap()
-                    .into_iter()
+                    .iter()
                     .fold(0, |acc, p| acc + p.block.len()) as u32;
 
-                println!("File info len = {}, Piece len = {}, Total len = {}", file_info.piece_length, block.len(), total_len);
+                println!(
+                    "File info len = {}, Piece len = {}, Total len = {}",
+                    file_info.piece_length, block_len, total_len
+                );
 
                 if total_len == file_info.piece_length {
                     println!("Piece completed");
 
-                    let full_piece =
-                        map.get(&0)
-                        .unwrap()
-                        .into_iter()
-                        .fold(Vec::new(), |mut acc, p| {
-                             acc.extend(&p.block);
-                             acc
-                        });
+                    let full_piece = map.get(&0).unwrap().iter().fold(Vec::new(), |mut acc, p| {
+                        acc.extend(&p.block);
+                        acc
+                    });
 
                     if hash_info(&full_piece) == file_info.pieces[0..=19] {
                         println!("HASH IS EQUAL");
                     };
                 }
-            },
+            }
             peer_wire_protocol::Msg {
                 prefix: _prefix,
                 id: Some(value),
@@ -291,7 +305,7 @@ fn receive_pieces(stream: &mut TcpStream, len: u32) {
         } else {
             println!("from = {}, to = {}, step = {}", from, to, step);
             send_request(stream, 0, from, step);
-            from = from + step;
+            from += step;
         }
     }
 }
@@ -325,7 +339,10 @@ fn read_reply(stream: &mut TcpStream) -> peer_wire_protocol::Msg {
             let block_len = (prefix - 9) as usize;
             let payload = read_bytes(stream, block_len + 8);
             println!("Piece index: {:?}", &payload[0..=3]);
-            println!("Piece offset: {:?}", i32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]));
+            println!(
+                "Piece offset: {:?}",
+                i32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]])
+            );
             println!("Block len: {:?}", block_len);
             return peer_wire_protocol::Msg {
                 prefix: prefix_length,
@@ -379,10 +396,10 @@ fn read_file_info(meta_info: &bencoder::DataType) -> peer_wire_protocol::SingleF
         .unwrap() as u32;
 
     let info = peer_wire_protocol::SingleFileInfo {
-        piece_length: piece_length,
+        piece_length,
+        length,
         pieces: pieces.to_vec(),
         name: String::from_utf8_lossy(&name[..]).to_string(),
-        length: length,
     };
 
     println!("Info pieces: {:?}", info.pieces);
