@@ -172,19 +172,11 @@ fn download_file(ip_addresses: &[SocketAddr], hash: &[u8], meta_info: &bencoder:
             } => {
                 println!("Thanks for piece");
                 // let len: usize = (i32::from_be_bytes(pref) - 9) as usize;
-                let index = i32::from_be_bytes([
-                    payload.data[0],
-                    payload.data[1],
-                    payload.data[2],
-                    payload.data[3],
-                ]) as u32;
-                let begin = i32::from_be_bytes([
-                    payload.data[4],
-                    payload.data[5],
-                    payload.data[6],
-                    payload.data[7],
-                ]) as u32;
-                let block = (&payload.data[8..]).to_vec();
+                let index =
+                    i32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]) as u32;
+                let begin =
+                    i32::from_be_bytes([payload[4], payload[5], payload[6], payload[7]]) as u32;
+                let block = (&payload[8..]).to_vec();
                 let block_len = block.len();
                 let piece = peer_wire_protocol::Piece {
                     index,
@@ -298,9 +290,11 @@ fn receive_pieces(stream: &mut TcpStream, len: u32) {
         let to = from + step;
 
         if to > len {
-            println!("TOO BIG");
-            println!("from = {}, to = {}, step = {}", from, len, len - from);
-            send_request(stream, 0, from, len - from);
+            if len - from != 0 {
+                println!("TOO BIG {}", to);
+                println!("from = {}, to = {}, step = {}", from, len, len - from);
+                send_request(stream, 0, from, len - from);
+            }
             break;
         } else {
             println!("from = {}, to = {}, step = {}", from, to, step);
@@ -347,7 +341,7 @@ fn read_reply(stream: &mut TcpStream) -> peer_wire_protocol::Msg {
             return peer_wire_protocol::Msg {
                 prefix: prefix_length,
                 id: Some(id),
-                payload: Some(peer_wire_protocol::Payload { data: payload }),
+                payload: Some(payload),
             };
         }
 
